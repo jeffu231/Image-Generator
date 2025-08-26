@@ -6,7 +6,8 @@ on:
   push:
     branches:
       - master
-
+    paths:
+      - 'Image-Generator/**'
 env:
   HUSKY: 0
 
