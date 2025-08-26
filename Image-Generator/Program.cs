@@ -2,11 +2,12 @@
 using System.CommandLine;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
 
 
 namespace Image_Generator;
 
-class Program
+static class Program
 {
     static async Task<int> Main(string[] args)
     {
@@ -19,20 +20,20 @@ class Program
         Option<string> fontOption = new("--font", "-f")
         {
             Description = "Font name to use",
-            DefaultValueFactory = parseResult => "Tahoma"
+            DefaultValueFactory = parseResult => "Arial"
         };
 
         var bgOption = new Option<string>("--background", "-bc")
         {
             Description = "Background color (name, #RRGGBB, #AARRGGBB, or rgb(r,g,b))",
-            DefaultValueFactory = parseResult => Color.White.ToString()
+            DefaultValueFactory = parseResult => Color.White.Name
         };
 
 
         var fgOption = new Option<string>("--textColor", "-tc")
         {
             Description = "Text color (name, #RRGGBB, #AARRGGBB, or rgb(r,g,b))",
-            DefaultValueFactory = parseResult => Color.Red.ToString()
+            DefaultValueFactory = parseResult => Color.Red.Name
         };
 
         var radioOption = new Option<string>("--radio", "-r")
@@ -80,16 +81,37 @@ class Program
         var (width, height) = GetImageSize(radioType);
         Bitmap bitmap = new Bitmap(width, height);
         Graphics graphics = Graphics.FromImage(bitmap);
-        graphics.Clear(ParseColor(bgColor)??Color.White);;
-        Brush textBrush = new SolidBrush(ParseColor(textColor)??Color.Red);;
-        var size = FindLargestFittingFontSize(text, "Tahoma", FontStyle.Bold, width);
+        
+        var backColor = ParseColor(bgColor);
+        if (backColor == null)
+        {
+            backColor = Color.White;
+            Console.WriteLine($"Background Color {bgColor} is not valid. Using default.");
+        }
+        
+        var txtColor = ParseColor(textColor);
+        if (txtColor == null)
+        {
+            txtColor = Color.Red;
+            Console.WriteLine($"Text Color {textColor} is not valid. Using default.");
+        }
+        graphics.Clear(backColor.Value);
+        Brush textBrush = new SolidBrush(txtColor.Value);;
+        if (IsFontInstalled(fontName) == false)
+        {
+            Console.WriteLine($"Font {fontName} not installed. Using default font Arial.");
+            fontName = "Arial";
+        }
+        var size = FindLargestFittingFontSize(text, fontName, FontStyle.Bold, width);
         var font = new Font(fontName, size, FontStyle.Bold);
         SizeF textSize = graphics.MeasureString(text, font);
 
         var drawY = (height - textSize.Height) / 2;
         var drawX = (width - textSize.Width) / 2;
+#if DEBUG
         Debug.WriteLine($"Height: {textSize.Height}, Width: {textSize.Width}");
         Debug.WriteLine($"Draw Height: {drawY}, Draw Width: {drawX}");
+#endif
         graphics.DrawString(text, font, textBrush, new PointF(drawX, drawY)); // X, Y coordinates
         var outputPath = Path.Combine(outputDir, $"{text.ToLower()}.bmp");
 
@@ -97,6 +119,22 @@ class Program
             new Rectangle(0, 0, bitmap.Width, bitmap.Height),
             PixelFormat.Format8bppIndexed); // Or other indexed formats like Format4bppIndexed, Format1bppIndexed
         indexedBitmap.Save(outputPath, ImageFormat.Bmp);
+        Console.WriteLine($"Image saved to {outputPath}");
+    }
+    
+    public static bool IsFontInstalled(string fontName)
+    {
+        using (InstalledFontCollection installedFonts = new InstalledFontCollection())
+        {
+            foreach (FontFamily family in installedFonts.Families)
+            {
+                if (family.Name.Equals(fontName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static (int, int) GetImageSize(string radioType)
@@ -114,7 +152,7 @@ class Program
         int maxWidthPixels)
     {
         float minFontSize = 1; // Minimum possible font size
-        float maxFontSize = 100; // Starting maximum font size (adjust as needed)
+        float maxFontSize = 100; // Starting maximum font size 
         float bestFitFontSize = minFontSize;
 
         // Use a Graphics object to measure text
@@ -147,9 +185,27 @@ class Program
     private static Color? ParseColor(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
+        {
             return null;
+        }
 
         input = input.Trim();
+        
+        // rgb(r,g,b)
+        if (input.StartsWith("rgb(", StringComparison.OrdinalIgnoreCase) && input.EndsWith(")"))
+        {
+            var inner = input.Substring(4, input.Length - 5);
+            var parts = inner.Split(',');
+            if (parts.Length == 3
+                && byte.TryParse(parts[0].Trim(), out var r)
+                && byte.TryParse(parts[1].Trim(), out var g)
+                && byte.TryParse(parts[2].Trim(), out var b))
+            {
+                return Color.FromArgb(r, g, b);
+            }
+            return null;
+        }
+
 
         // Hex formats: #RRGGBB, #RGB
         if (input.StartsWith("#", StringComparison.Ordinal))
@@ -169,7 +225,7 @@ class Program
         var c = Color.FromName(input);
         if (c.A != 0 || string.Equals(input, "Transparent", StringComparison.OrdinalIgnoreCase))
             return c;
-
+       
         return null;
     }
 }
