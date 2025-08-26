@@ -3,6 +3,8 @@
 
 ## Image Generator for Motorola XPR series radios
 
+Requires .NET 9.0 or higher and runs on Windows x64.
+
 Creates basic images with text for the welcome screen of Motorola XPR series radios.
 
 Currently the mobile XPR5580 have been tested, but it may work for others in the same series.
