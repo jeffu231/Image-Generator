@@ -1,4 +1,7 @@
-﻿## Image Generator for Motorola XPR series radios
+﻿![GitHub release (with filter)](https://img.shields.io/github/v/release/jeffu231/Image-Generator?logo=GitHub)
+[![download](https://img.shields.io/badge/download-release-blue.svg)](https://github.com/jeffu231/Image-Generator/releases/latest)
+
+## Image Generator for Motorola XPR series radios
 
 Creates basic images with text for the welcome screen of Motorola XPR series radios.
 
