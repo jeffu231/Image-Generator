@@ -141,6 +141,8 @@ static class Program
     {
         switch (radioType)
         {
+            case "XPR7580":
+                return (132, 90);
             case "XPR5580":
                 return (160, 72);
             default:
